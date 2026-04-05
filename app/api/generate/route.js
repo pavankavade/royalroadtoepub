@@ -120,7 +120,8 @@ export async function POST(request) {
 
         // Add cover if available
         if (coverUrl) {
-          epubOptions.cover = coverUrl;
+          // Strip query parameters so epub-gen-memory's mime.getType() correctly detects the extension
+          epubOptions.cover = coverUrl.split('?')[0];
         }
 
         const epubBuffer = await epubGenMemory(epubOptions, epubContent);
