@@ -9,13 +9,16 @@ A modern Next.js application that scrapes fictions from Royal Road and compiles 
 - **Real-Time Progress**: Watch the download progress in real-time as each chapter is fetched and processed.
 - **In-Memory Generation**: Bypasses local file system permission issues by securely building the EPUB file directly in volatile memory. 
 - **Premium User Interface**: Dark theme aesthetics featuring glassmorphic designs, gold accents, and subtle background animations.
+- **Dual Extraction Modes**:
+  - *Standard*: Lightning-fast extraction utilizing raw HTTP requests.
+  - *Browser/Accurate*: Employs a headless browser to render the page, accurately filter out hidden anti-piracy HTML text, and trigger JavaScript trackers to ensure the author properly receives their chapter reading views! 
 - **Ethical Scraping**: Includes a 500ms request delay mechanism to avoid rate-limiting or abusing Royal Road's servers.
 
 ## Technology Stack
 
 - **Framework**: [Next.js](https://nextjs.org/) (App Router)
 - **UI/UX**: Custom CSS (Dark Theme + CSS grid/flexbox + CSS Animations)
-- **Scraping logic**: [Axios](https://axios-http.com/) & [Cheerio](https://cheerio.js.org/)
+- **Scraping logic**: [Axios](https://axios-http.com/), [Cheerio](https://cheerio.js.org/), & [Puppeteer](https://pptr.dev/)
 - **EPUB Generation**: [epub-gen-memory](https://www.npmjs.com/package/epub-gen-memory)
 
 ## Getting Started

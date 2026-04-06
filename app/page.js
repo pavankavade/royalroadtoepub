@@ -16,6 +16,7 @@ export default function Home() {
   const [appState, setAppState] = useState(STATES.IDLE);
   const [bookInfo, setBookInfo] = useState(null);
   const [selectedChapters, setSelectedChapters] = useState([]);
+  const [extractionType, setExtractionType] = useState('standard');
   const [progress, setProgress] = useState({ current: 0, total: 0, chapterTitle: '' });
   const [statusMsg, setStatusMsg] = useState('');
   const [error, setError] = useState('');
@@ -74,6 +75,7 @@ export default function Home() {
           title: bookInfo.title,
           author: bookInfo.author,
           coverUrl: bookInfo.coverUrl,
+          extractionType,
         }),
       });
 
@@ -326,14 +328,38 @@ export default function Home() {
 
               {/* Generate Button */}
               {appState === STATES.INFO_LOADED && (
-                <button
-                  id="btn-generate"
-                  className="btn-generate"
-                  onClick={generateEpub}
-                  disabled={selectedChapters.length === 0}
-                >
-                  📚 Generate EPUB ({selectedChapters.length} chapters)
-                </button>
+                <div className="generate-wrapper">
+                  <div className="extraction-options" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.5rem', justifyContent: 'center', color: '#ccc', fontSize: '0.9rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        value="standard" 
+                        checked={extractionType === 'standard'} 
+                        onChange={(e) => setExtractionType(e.target.value)} 
+                        style={{ accentColor: '#8b5cf6' }}
+                      />
+                      Standard (Fast)
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        value="browser" 
+                        checked={extractionType === 'browser'} 
+                        onChange={(e) => setExtractionType(e.target.value)} 
+                        style={{ accentColor: '#8b5cf6' }}
+                      />
+                      Browser Extractor (Accurate)
+                    </label>
+                  </div>
+                  <button
+                    id="btn-generate"
+                    className="btn-generate"
+                    onClick={generateEpub}
+                    disabled={selectedChapters.length === 0}
+                  >
+                    📚 Generate EPUB ({selectedChapters.length} chapters)
+                  </button>
+                </div>
               )}
             </>
           )}

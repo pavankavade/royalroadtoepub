@@ -53,6 +53,64 @@ async function fetchChapterContent(url) {
   return content || '<p>Chapter content could not be extracted.</p>';
 }
 
+async function fetchChapterContentWithBrowser(page, url) {
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    
+    const content = await page.evaluate(() => {
+      const selectors = [
+        '.chapter-content',
+        '.chapter-inner.chapter-content',
+        '#chapter-content',
+        '.entry-content',
+        '.prose',
+      ];
+      
+      let container = null;
+      for (const selector of selectors) {
+        container = document.querySelector(selector);
+        if (container) break;
+      }
+      
+      if (!container) {
+        let maxLen = 0;
+        document.querySelectorAll('div').forEach(el => {
+          const text = el.innerText.trim();
+          if (text.length > maxLen && text.length > 500) {
+            maxLen = text.length;
+            container = el;
+          }
+        });
+      }
+      
+      if (!container) return null;
+
+      const unwanted = container.querySelectorAll('.portlet, .nav-buttons, .advertisement, script, style, .author-note, .authors-note');
+      unwanted.forEach(el => el.remove());
+
+      const allElements = container.querySelectorAll('*');
+      allElements.forEach(el => {
+        const style = window.getComputedStyle(el);
+        if (
+          style.display === 'none' ||
+          style.visibility === 'hidden' ||
+          style.opacity === '0' ||
+          style.fontSize === '0px' ||
+          (el.offsetWidth === 0 && el.offsetHeight === 0 && el.nodeName !== 'SPAN' && el.nodeName !== 'A') 
+        ) {
+          el.remove();
+        }
+      });
+      
+      return container.innerHTML;
+    });
+    
+    return content || '<p>Chapter content could not be extracted via browser.</p>';
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function POST(request) {
   const encoder = new TextEncoder();
 
@@ -64,7 +122,7 @@ export async function POST(request) {
 
       try {
         const body = await request.json();
-        const { chapters, title, author, coverUrl } = body;
+        const { chapters, title, author, coverUrl, extractionType } = body;
 
         if (!chapters || !chapters.length) {
           sendEvent({ type: 'error', message: 'No chapters provided' });
@@ -73,6 +131,31 @@ export async function POST(request) {
         }
 
         sendEvent({ type: 'start', total: chapters.length, title });
+
+        const useBrowser = extractionType === 'browser';
+        let browser = null;
+        let page = null;
+
+        if (useBrowser) {
+          try {
+            const puppeteer = (await import('puppeteer')).default;
+            browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
+            page = await browser.newPage();
+            await page.setRequestInterception(true);
+            page.on('request', (req) => {
+              if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) {
+                req.abort();
+              } else {
+                req.continue();
+              }
+            });
+          } catch (e) {
+             console.error("Failed to launch browser", e);
+             sendEvent({ type: 'error', message: 'Failed to initialize browser extractor. Is puppeteer installed?' });
+             controller.close();
+             return;
+          }
+        }
 
         // Fetch each chapter content
         const epubContent = [];
@@ -87,7 +170,12 @@ export async function POST(request) {
           });
 
           try {
-            const content = await fetchChapterContent(chapter.url);
+            let content = '';
+            if (useBrowser) {
+              content = await fetchChapterContentWithBrowser(page, chapter.url);
+            } else {
+              content = await fetchChapterContent(chapter.url);
+            }
             epubContent.push({
               title: chapter.title,
               content: content,
@@ -104,6 +192,10 @@ export async function POST(request) {
           if (i < chapters.length - 1) {
             await sleep(500);
           }
+        }
+
+        if (browser) {
+          await browser.close();
         }
 
         sendEvent({ type: 'generating', message: 'Generating EPUB file...' });
